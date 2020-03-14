@@ -11,10 +11,7 @@ def get_main_folder(path: Text) -> Path:
     """ get main folder, where must be placed test dir """
     path = os.path.dirname(os.fspath(path)) \
         if os.path.isfile(path) else os.fspath(path)
-    n = 2
-
-    while n >= 0:
-        n -= 1
+    for n in range(1, -2, -1):
         path_content = os.listdir(path)
         if INIT_FILE not in path_content or n < 0:
             return path
