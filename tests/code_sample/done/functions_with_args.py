@@ -31,5 +31,4 @@ def funct_with_multiple_alias_with_error(arg1, arg2, arg3):
 
 
 def func_arg_manipulation_to_var(arg1):
-    val = arg1.split()
-    return val
+    return arg1.split()
