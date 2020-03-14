@@ -56,20 +56,18 @@ def generate_tests(an: Analyzer, code_lines: Dict, debug: bool):
 
 
 def add_imports(path):
-    imports_header = f'import sys\n' \
-                     f'sys.path.append(\'{os.path.dirname(path)}\')\n' \
-                     f'from {os.path.basename(path).replace(".py", "")} import {key_import}\n'
-
-    return imports_header
+    return (
+        f'import sys\n'
+        f'sys.path.append(\'{os.path.dirname(path)}\')\n'
+        f'from {os.path.basename(path).replace(".py", "")} import {key_import}\n'
+    )
 
 
 def generate_test_file_content(an: Analyzer, path: Text, code_lines: List, debug: bool) -> Text:
     async_in = True if an.tree.get('async') else False
     result = generate_tests(an, code_lines, debug)
     if result:
-        # need to add import of module that we test
-        file_output = combine_file(result, path, async_in)
-        return file_output
+        return combine_file(result, path, async_in)
 
 
 def combine_file(result: tuple, path: Text, async_in: bool) -> Text:
@@ -93,9 +91,7 @@ def get_method_signature(func_name: Text, async_type: bool, class_name=None) -> 
     if class_name:
         func_name = f'{convert(class_name)}_{func_name}'
     method_signature = s.method_signature if not async_type else s.async_method_signature
-    # create test method signature
-    func_definition = method_signature.format(SP_4=s.SP_4, method=func_name)
-    return func_definition
+    return method_signature.format(SP_4=s.SP_4, method=func_name)
 
 
 def convert(name):
@@ -116,7 +112,7 @@ def class_methods_names_create(func_name, class_, class_method_type):
         raise
     elif class_method_type not in ['static', 'class', 'self']:
         raise
-    if class_method_type == 'static' or class_method_type == 'class':
+    if class_method_type in ['static', 'class']:
         func_name = f'{class_["name"]}.{func_name}'
         # we nod need to initialise object
         class_instance = None
@@ -209,8 +205,7 @@ def test_body_resolver(test_func_definition: Text, func_name: Text, func_data: D
                     print(arg, value)
                     locals()[arg] = value
 
-                str_ = f"\'{eval(return_value)}\\n\'"
-                return str_
+                return f"\'{eval(return_value)}\\n\'"
             asserts_definition_str = function_header + f"\n{s.SP_4}" \
                                                        f"" + s.log_capsys_str + f"\n{s.SP_4}assert captured.out " \
                                                                                 f"== {_get_str_value()}\n"

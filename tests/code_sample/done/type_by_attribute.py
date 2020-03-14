@@ -1,22 +1,16 @@
 def split_line(line):
-    splited_line = line.split()
-    return splited_line
+    return line.split()
 
 
 def index_line(array, elem):
-    _index = array.index(elem)
-    return _index
+    return array.index(elem)
 
 
 def split_by_symbol(line, symbol):
-    _index = line.split(symbol)
-    return _index
+    return line.split(symbol)
 
 
 def parse_cookie(cookie):
     for chunk in cookie.split(';'):
-        if '=' in chunk:
-            key, val = chunk.split('=', 1)
-        else:
-            key, val = '', chunk
+        key, val = chunk.split('=', 1) if '=' in chunk else ('', chunk)
     return key, val
