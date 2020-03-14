@@ -6,11 +6,11 @@ from random import random, randint, choice
 def map_types_in_range(_type, left_border: int, right_border: int, _slice: Union[int, Text] = None):
     if _slice:
         return int_generator(left_border, right_border)
-    if _type == {'No type': True} or _type == int:
+    if _type in [{'No type': True}, int]:
         return int_generator(left_border, right_border)
     elif _type == float:
         return float_generator(left_border, right_border)
-    elif _type == Text or _type == str:
+    elif _type in [Text, str]:
         return str_generator()
     elif _type is None:
         return None
@@ -19,7 +19,7 @@ def map_types_in_range(_type, left_border: int, right_border: int, _slice: Union
 
 
 def map_types_include(_type, include=None, exclude=None, slices=None):
-    if _type == Text or _type == str:
+    if _type in [Text, str]:
         return str_generator(include, exclude)
     elif _type == float:
         return float_generator(include=include, exclude=exclude)
@@ -34,15 +34,15 @@ def map_types_include(_type, include=None, exclude=None, slices=None):
 def map_types(_type, slices=None):
     if isinstance(_type, str):
         _type = eval(_type)
-    if _type == Text or _type == str:
+    if _type in [Text, str]:
         return str_generator()
-    elif _type == dict or _type == Dict:
+    elif _type in [dict, Dict]:
         return dict_generator(slices)
     elif _type == float:
         return float_generator()
     elif _type == int:
         return int_generator()
-    elif _type == list or _type == List:
+    elif _type in [list, List]:
         return list_generator(slices)
     elif _type is None:
         return None
@@ -65,16 +65,12 @@ def str_generator(include=None, exclude=None):
 
 def int_generator(left_border=None, right_border=None, include=None, exclude=None):
     if left_border and right_border:
-        values = [randint(left_border, right_border) for _ in range(0, 3)]
-        return values
+        return [randint(left_border, right_border) for _ in range(3)]
     if include:
         return include[0]
     if exclude:
-        _int_exclude = []
+        _int_exclude = [int(i) for i in exclude if isinstance(i, str) and i.isdigit()]
 
-        for i in exclude:
-            if isinstance(i, str) and i.isdigit():
-                _int_exclude.append(int(i))
         return next(x for x in (randint(3, 15) for _ in range(3)) if x not in _int_exclude)
     return randint(1, 15)
 
@@ -83,7 +79,12 @@ def float_generator(left_border: int = None, right_border: int = None, include=N
     if include:
         return include
     if exclude:
-        return [x for x in [round(random() * 10, 2) for _ in range(0, 3)] if x not in exclude][0]
+        return [
+            x
+            for x in [round(random() * 10, 2) for _ in range(3)]
+            if x not in exclude
+        ][0]
+
     if left_border and right_border:
         return [round(randint(left_border, right_border) * random() * 10, 2) for _ in range(0, 3)]
     else:
@@ -112,10 +113,7 @@ def list_generator(slices_):
         default_elem_type = int
         slices_ = {0: 0}
     for i in range(max(slices_.keys()) + 1):
-        if not slices_.get(i):
-            elem_type = default_elem_type
-        else:
-            elem_type = slices_.get(i)['type']
+        elem_type = default_elem_type if not slices_.get(i) else slices_.get(i)['type']
         value = map_types(elem_type)
         list_output.append(value)
     return list_output

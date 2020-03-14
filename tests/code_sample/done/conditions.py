@@ -28,7 +28,7 @@ def one_condition_custom_exception_and_return_binary_op(arg1, arg2=123, arg3=123
         return arg1
     var = 1
     alias = var
-    return arg1 * arg2 + arg3, var * arg1 * alias - 2
+    return arg1 * arg2 + arg3, alias * arg1 * alias - 2
 
 def one_condition_custom_exception_and_return_binary_op_and_key(arg1, arg2, arg3):
     if arg1 == '1':
@@ -37,7 +37,7 @@ def one_condition_custom_exception_and_return_binary_op_and_key(arg1, arg2, arg3
         print(f'{arg2[3]} more when 2')
     var = 1
     alias = var
-    return arg1 * arg2[3] + arg3['number'], var * arg1 * alias - 2
+    return arg1 * arg2[3] + arg3['number'], alias * arg1 * alias - 2
 
 
 def body_in_conditions(chunk):
