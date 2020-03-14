@@ -24,7 +24,7 @@ class ClassForTest(object):
 	def static_method_one():
 		result = 5 + 9
 		alias = result
-		return result * alias
+		return alias * alias
 
 	@staticmethod
 	def static_method_two():

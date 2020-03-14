@@ -12,10 +12,7 @@ def get_value_name(value: Union[Dict, Any], separate_slice: bool = False) -> Any
     args = None
     if isinstance(value, dict):
         if 'arg' in value:
-            if 'args' in value['arg']:
-                args = value['arg']['args']
-            else:
-                args = value['arg']
+            args = value['arg']['args'] if 'args' in value['arg'] else value['arg']
         elif 'func' in value:
             args = value['func']['l_value']['args']
     if not args:
@@ -35,4 +32,3 @@ def is_int(value: Union[str, int]) -> int:
         return int(value)
     except Exception as e:
         raise e
-        return False
