@@ -172,5 +172,4 @@ def init_config(args: Dict) -> Config:
     """ init Conig singleton and write to global variable, one instance per run"""
     global config
 
-    config = get_config(args)
-    return config
+    return get_config(args)
