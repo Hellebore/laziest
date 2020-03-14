@@ -6,8 +6,7 @@ def int_math_operations():
     e = c % 120  # mod
     f = +d/e  # truediv
     g = -b  # negative
-    result = (((a + b) - f) // 45) * g  # floor div + multiply binary operations
-    return result
+    return (((a + b) - f) // 45) * g
 
 
 # TODO: operator.matmul(a, b) goes to numpy tests
@@ -19,8 +18,7 @@ def float_math_operations():
     e = c % 1.20  # mod
     f = d/e  # truediv
     g = -b  # negative
-    result = (((a + b) - f) // 45) * g  # floor div + multiply binary operations
-    return result
+    return (((a + b) - f) // 45) * g
 
 
 def int_bitwise_operations():
