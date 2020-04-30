@@ -207,7 +207,7 @@ class Analyzer(ast.NodeVisitor):
                     return True, False
         if getattr(node, 'value', None):
             if (getattr(node.value, 'id', None) and node.value.id in self.func_data['args']) or (
-                    getattr(node.value, 'id', None) and node.value.id in self.func_data['steps_dependencies']):
+                            getattr(node.value, 'id', None) and node.value.id in self.func_data['steps_dependencies']):
                 return True, True
             elif isinstance(node.value, _ast.Tuple):
                 for inner_node in node.value.elts:
@@ -216,10 +216,12 @@ class Analyzer(ast.NodeVisitor):
                         return True, True
             elif isinstance(node.value, _ast.Call):
                 func = node.value.func
-                if not isinstance(func, _ast.Name):
-                    if getattr(func.value, 'id', None) and func.value.id \
-                            in self.func_data['args'] or func.value.id in self.func_data['steps_dependencies']:
-                        return True, True
+                if not isinstance(func, _ast.Name) and (
+                    getattr(func.value, 'id', None)
+                    and func.value.id in self.func_data['args']
+                    or func.value.id in self.func_data['steps_dependencies']
+                ):
+                    return True, True
         return False, False
 
     def process_for_node(self, node, variables_names, variables):
@@ -342,12 +344,13 @@ class Analyzer(ast.NodeVisitor):
                         arg_name = inner_node.id
             elif isinstance(node.value, _ast.Call):
                 func = node.value.func
-                if getattr(func.value, 'id', None):
-                    if func.value.id in self.func_data['args']:
-                        arg_name = func.value.id
-        if not arg_name:
-            if var_name in self.func_data['steps_dependencies']:
-                arg_name = self.func_data['steps_dependencies'][var_name]
+                if (
+                    getattr(func.value, 'id', None)
+                    and func.value.id in self.func_data['args']
+                ):
+                    arg_name = func.value.id
+        if not arg_name and var_name in self.func_data['steps_dependencies']:
+            arg_name = self.func_data['steps_dependencies'][var_name]
         if var_name not in self.func_data['args']:
             # TODO: need to add work around when as var used different function arg
             self.func_data['steps_dependencies'][var_name] = arg_name
@@ -480,9 +483,12 @@ class Analyzer(ast.NodeVisitor):
                     and isinstance(node.op, _ast.Add):
                 # concatination
                 math_type = False
-            if (isinstance(bin_op_left, dict) and 'BinOp' not in bin_op_left) \
-                    and (isinstance(bin_op_right, dict) and 'BinOp' not in bin_op_right) or (
-                    not (isinstance(bin_op_left, dict) or not (isinstance(bin_op_right, dict)))):
+            if (
+                (isinstance(bin_op_left, dict) and 'BinOp' not in bin_op_left)
+                and (isinstance(bin_op_right, dict) and 'BinOp' not in bin_op_right)
+                or not isinstance(bin_op_left, dict)
+                and isinstance(bin_op_right, dict)
+            ):
                 for item in [bin_op_right, bin_op_left]:
                     args = self.extract_args_in_bin_op(item, args)
                 if args:
@@ -518,7 +524,7 @@ class Analyzer(ast.NodeVisitor):
                 # TODO: need refactor all this logic with setting type by binop
                 opposite_side = [x for x in sides if x != side]
                 if isinstance(side, dict) and ('args' in side or 'arg' in side) \
-                        and opposite_side and 'func' not in side:
+                                    and opposite_side and 'func' not in side:
                     if side.get('args', None):
                         _side_args = side.get('args', None)
                     elif side.get('arg'):
@@ -542,16 +548,20 @@ class Analyzer(ast.NodeVisitor):
                         _type_check = bool(self.func_data['args'][_arg_name]['type'])
                     else:
                         _type_check = bool(self.func_data['keys'][_side_args['slice']][_arg_name]['type'])
-                    if isinstance(side, dict) and _side_args and not _type_check:
-                        if isinstance(opposite_side, dict):
-                            if 'args' in opposite_side:
-                                self.set_type_to_func_args(_side_args,
-                                                           self.func_data['args'][opposite_side['args']]['type'])
-                            elif 'BinOp' in opposite_side:
-                                if 'args' in opposite_side['left']:
-                                    self.set_type_to_func_args(
-                                        _side_args, self.func_data['args'][opposite_side['left']['args']]['type'])
-                            _type = True
+                    if (
+                        isinstance(side, dict)
+                        and _side_args
+                        and not _type_check
+                        and isinstance(opposite_side, dict)
+                    ):
+                        if 'args' in opposite_side:
+                            self.set_type_to_func_args(_side_args,
+                                                       self.func_data['args'][opposite_side['args']]['type'])
+                        elif 'BinOp' in opposite_side:
+                            if 'args' in opposite_side['left']:
+                                self.set_type_to_func_args(
+                                    _side_args, self.func_data['args'][opposite_side['left']['args']]['type'])
+                        _type = True
             return {'BinOp': True, 'left': bin_op_left, 'op': node.op, 'right': bin_op_right}
 
         elif isinstance(node, _ast.Subscript):
@@ -628,11 +638,14 @@ class Analyzer(ast.NodeVisitor):
             # arg_1 *= 10 operations
             arg = self.get_value(node.target, variables_names, variables)
             # TODO: need to modify type set, can be str also
-            if not isinstance(arg['args'], dict):
-                if not self.func_data['args'][arg['args']].get('type') or (
+            if not isinstance(arg['args'], dict) and (
+                not self.func_data['args'][arg['args']].get('type')
+                or (
                     isinstance(self.func_data['args'][arg['args']]['type'], dict)
-                        and self.func_data['args'][arg['args']]['type'] is None):
-                    self.set_type_to_func_args(arg['args'], int)
+                    and self.func_data['args'][arg['args']]['type'] is None
+                )
+            ):
+                self.set_type_to_func_args(arg['args'], int)
             if 'args' in arg:
                 return {'arg': arg,
                         'op': f'{meta.operators[node.op.__class__]}',
@@ -668,10 +681,7 @@ class Analyzer(ast.NodeVisitor):
 
     def reverse_condition_group(self, statement_group: Union[Dict, List]) -> Dict:
         if isinstance(statement_group, list):
-            not_statement_group = []
-            for statement in statement_group:
-                not_statement_group.append(self.reverse_condition(statement))
-            return not_statement_group
+            return [self.reverse_condition(statement) for statement in statement_group]
         else:
             return self.reverse_condition(statement_group)
 
@@ -708,20 +718,24 @@ class Analyzer(ast.NodeVisitor):
                 # TODO: need to refactor and move out
                 for strategy in strategy_block:
                     for side in ['comparators', 'left']:
-                        if isinstance(strategy[side], dict) and 'func' in strategy[
-                                side] and strategy[side]['func'] not in funcs_checked:
-                            if 'args' in strategy[side] and isinstance(strategy[side]['args'], str):
-                                arg = strategy[side]['func']['l_value'].get('args', None)
-                                funcs_checked.append(strategy[side]['func'])
-                                if arg:
-                                    rule = {'comparators': strategy[side]['args'],
-                                            'left': {'args': arg},
-                                            'ops': 'in'}
-                                    opposite_rule = {'comparators': strategy[side]['args'],
-                                                     'left': {'args': arg},
-                                                     'ops': 'not in'}
-                                    new_rules.append(rule)
-                                    new_rules.append(opposite_rule)
+                        if (
+                            isinstance(strategy[side], dict)
+                            and 'func' in strategy[side]
+                            and strategy[side]['func'] not in funcs_checked
+                            and 'args' in strategy[side]
+                            and isinstance(strategy[side]['args'], str)
+                        ):
+                            arg = strategy[side]['func']['l_value'].get('args', None)
+                            funcs_checked.append(strategy[side]['func'])
+                            if arg:
+                                rule = {'comparators': strategy[side]['args'],
+                                        'left': {'args': arg},
+                                        'ops': 'in'}
+                                opposite_rule = {'comparators': strategy[side]['args'],
+                                                 'left': {'args': arg},
+                                                 'ops': 'not in'}
+                                new_rules.append(rule)
+                                new_rules.append(opposite_rule)
         _new_s = []
         for rule in new_rules:
             for strategy_block in s:
@@ -732,10 +746,7 @@ class Analyzer(ast.NodeVisitor):
             s = _new_s
         func_data['s'] = s
         if len(func_data['return']) < len(func_data['s']):
-            if _new_s:
-                result = deepcopy(func_data['return'][-1])
-            else:
-                result = None
+            result = deepcopy(func_data['return'][-1]) if _new_s else None
             for _ in range(len(func_data['s']) - len(func_data['return'])):
                 func_data['return'].append({'result': result})
         return func_data
@@ -747,8 +758,7 @@ class Analyzer(ast.NodeVisitor):
         split_by_attr = line.split(node.attr)[1]
         if split_by_attr.startswith('.'):
             _call = split_by_attr.split(',')[0]
-        attr_call = node.attr + _call
-        return attr_call
+        return node.attr + _call
 
     def identify_type_by_attr(self, inner_function_arg: Union[Dict, Any],
                               func: Dict, variables: List, variables_names: Dict) -> None:
@@ -760,12 +770,8 @@ class Analyzer(ast.NodeVisitor):
         arg_type = None
         if arg in self.func_data['args']:
             func_arg_type = self.func_data['args'][arg].get('type', None)
-            if func_arg_type:
-                if isinstance(func_arg_type, dict):
-                    if not func_arg_type:
-                        arg_type = func_arg_type
-                else:
-                    arg_type = func_arg_type
+            if func_arg_type and not isinstance(func_arg_type, dict):
+                arg_type = func_arg_type
         attrib = func["attr"]
         if not arg_type:
             arg_type = self.set_type_by_attrib(arg, attrib=attrib)
@@ -854,12 +860,13 @@ class Analyzer(ast.NodeVisitor):
             if funct_info['args']:
                 funct_info['doc'] = self.extract_types_from_docstring(body_item)
             for decorator in body_item.decorator_list:
-                if isinstance(decorator, ast.Name) and decorator.id == 'staticmethod':
-                    class_dict['def']['static'][body_item.name] = funct_info
-                    break
-                elif isinstance(decorator, ast.Name) and decorator.id == 'classmethod':
-                    class_dict['def']['class'][body_item.name] = funct_info
-                    break
+                if isinstance(decorator, ast.Name):
+                    if decorator.id == 'staticmethod':
+                        class_dict['def']['static'][body_item.name] = funct_info
+                        break
+                    elif decorator.id == 'classmethod':
+                        class_dict['def']['class'][body_item.name] = funct_info
+                        break
             else:
                 class_dict['def']['self'][body_item.name] = funct_info
 

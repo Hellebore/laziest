@@ -27,9 +27,8 @@ def function_with_binary_op_on_several_args_and_tuple_return_multiple_BinOps(arg
 def funct_with_multiple_alias_with_error(arg1, arg2, arg3):
     var = 'one'
     alias = var
-    return arg1 * arg2 + arg3, var * arg1 * alias
+    return arg1 * arg2 + arg3, alias * arg1 * alias
 
 
 def func_arg_manipulation_to_var(arg1):
-    val = arg1.split()
-    return val
+    return arg1.split()

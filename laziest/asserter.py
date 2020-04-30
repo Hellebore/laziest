@@ -38,15 +38,13 @@ class Asserter:
         if isinstance(strategy, analyzer.StrategyAny):
             # mean we have no conditions for args
             strategy = None
-        pack_param_strategy = generate_params_based_on_strategy(args,
-                                                                self.func_data,
-                                                                strategy,
-                                                                self.base_params)
-        return pack_param_strategy
+        return generate_params_based_on_strategy(args,
+                                                                    self.func_data,
+                                                                    strategy,
+                                                                    self.base_params)
 
     def process_var_return(self, var_name: Text, params: Dict) -> Dict:
-        result = self.eval_steps_in_order(var_name, params, var=True)
-        return result
+        return self.eval_steps_in_order(var_name, params, var=True)
 
     def safe_exec(self, pack_param_strategy: Dict) -> Dict:
         # TODO: need to make it safe
@@ -84,12 +82,16 @@ class Asserter:
                 if type(elem) in meta.simple_types:
                     result_value.append(elem)
                     continue
-                if isinstance(elem, dict) and list(elem.keys()) == ['args']:
-                    if 'args' in elem and elem['args'] and \
-                            elem['args'] in self.func_data['steps']:
+                if (
+                    isinstance(elem, dict)
+                    and list(elem.keys()) == ['args']
+                    and 'args' in elem
+                    and elem['args']
+                    and elem['args'] in self.func_data['steps']
+                ):
 
-                        result_value.append(self.eval_steps_in_order(elem['args'], pack_param_strategy))
-                        continue
+                    result_value.append(self.eval_steps_in_order(elem['args'], pack_param_strategy))
+                    continue
                 if isinstance(elem, Iterable) and 'BinOp' in elem:
                     # TODO: not sure about this part
                     pack_result = self.get_assert_for_params(return_pack, pack_param_strategy)['result']
@@ -121,10 +123,7 @@ class Asserter:
                         result_value.append(pack_result)
             if result_value and len(result_value) == 1:
                 _return_value = result_value[0]
-            elif result_value is None:
-
-                _return_value = result_value
-            elif 'error' in result_value:
+            elif result_value is None or 'error' in result_value:
 
                 _return_value = result_value
             else:
@@ -205,9 +204,7 @@ class Asserter:
         else:
             if isinstance(return_pack['result'], dict) and 'args' in return_pack['result']:
                 _return_value = args[return_pack['result']['args']]
-            elif (isinstance(rp_result, dict) and ('exec' in rp_result or (
-                    isinstance(rp_result, tuple) and rp_result[0].get('exec')))) or isinstance(
-                        rp_result, types.GeneratorType):
+            elif isinstance(rp_result, types.GeneratorType):
 
                 # TODO: this is shit, need to fix issue why generator come here, this is a dirty fix
                 params = self.safe_exec(pack_param_strategy)
@@ -252,9 +249,11 @@ class Asserter:
         while isinstance(_statement, dict):
             if not isinstance(_statement.get('value', {}), dict):
                 _load = self.func_data[_statement['t']].get(_statement['value'])
-                if _statement['t'] == 'import':
-                    if _load in globals()['__builtin__']:
-                        raise
+                if (
+                    _statement['t'] == 'import'
+                    and _load in globals()['__builtin__']
+                ):
+                    raise
             for key in ['l_value', 'func']:
                 # logic for attribute functions calls
                 if key in _statement:
@@ -309,11 +308,13 @@ class Asserter:
             statement = statement['func'] + f'({statement["args"]})'
         else:
             statement, _import = self.prepare_attrib_function_call_to_eval(statement)
-        results = []
         if _import:
             globals()[_import] = __import__(_import, _import)
-        for i in range(0, 2):
-            results.append(eval(statement, globals().update(deepcopy(pack_param_strategy))))
+        results = [
+            eval(statement, globals().update(deepcopy(pack_param_strategy)))
+            for _ in range(2)
+        ]
+
         if results[0] != results[1]:
             print('Different outputs per run')
             random_values = True
@@ -366,8 +367,7 @@ class Asserter:
                                 bin_op[item] = params[bin_op[item]['arg']].get(_slice)
 
                 except KeyError as e:
-                    return_value = {'error': e.__class__.__name__, 'comment': e}
-                    return return_value
+                    return {'error': e.__class__.__name__, 'comment': e}
 
     def eval_bin_op_with_params(self, bin_op: Dict, eval_params: Dict, params: Dict) -> Union[Any, Dict]:
 
@@ -448,10 +448,7 @@ class Asserter:
         _result = return_pack.get('result', {})
         if isinstance(_result, tuple):
             result = self.resolve_tuple_in_return(return_pack['result'], params)
-            if isinstance(result, list):
-                return_value = tuple(result)
-            else:
-                return_value = result
+            return_value = tuple(result) if isinstance(result, list) else result
         elif isinstance(_result, dict) and 'BinOp' in _result:
             # update binops_arg per tuple with common generated args for function
             return_value = self.resolve_bin_op_in_result(return_pack['result'], params)
