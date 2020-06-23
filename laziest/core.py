@@ -54,10 +54,11 @@ def run_laziest(args: dict):
 def generate_bunch_of_test_files(python_paths, debug):
     num_cores = mp.cpu_count()
     pool = mp.Pool(num_cores)
-    jobs = []
+    jobs = [
+        pool.apply_async(tests_generator_per_file, (python_file, debug))
+        for python_file in python_paths
+    ]
 
-    for python_file in python_paths:
-        jobs.append(pool.apply_async(tests_generator_per_file, (python_file, debug)))
 
     # wait for all jobs to finish
     for job in list(jobs):
